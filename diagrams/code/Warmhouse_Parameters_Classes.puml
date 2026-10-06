@@ -1,0 +1,92 @@
+@startuml Warmhouse_Parameters_Classes
+title Тёплый дом — классы: управление параметрами устройств
+
+top to bottom direction
+skinparam classAttributeIconSize 0
+
+package "Управление параметрами устройств" {
+    class CommandManager {
+        +validate(ownerId: String, command: Command): error
+        +execute(ownerId: String, command: Command): error
+    }
+    class CommandValidator {
+        +validate(ownerId: String, command: Command, device: Device): error
+    }
+    interface DeviceProvider {
+        +getDeviceById(ownerId: String, deviceId: String): (Device, error)
+    }
+    interface "DeviceAdapter<T : Device>" as DeviceAdapter {
+        +send(device: T, command: Command): error
+    }
+    class ThermostatAdapter <<термостаты>> {
+        +send(device: Thermostat, command: Command): error
+    }
+    class LightRelayAdapter <<реле света>> {
+        +send(device: LightRelay, command: Command): error
+    }
+    class GateControllerAdapter <<контроллеры ворот>> {
+        +send(device: GateController, command: Command): error
+    }
+    abstract class Device {
+        +id: String
+        +owner_id: String
+        +location: String
+        +/deviceType: String
+        +measurementUnit: String [0..1]
+        +endpoint: String
+        +attributes: JSON
+        +model: DeviceModel
+        {abstract} +validate(parameter: String, value: JSON): error
+    }
+    class Thermostat {
+        +canonicalUnit: String = Cel
+        +minTargetTemperatureCel: Decimal
+        +maxTargetTemperatureCel: Decimal
+        +validate(parameter: String, value: JSON): error
+    }
+    class LightRelay {
+        +supportedPowerStates: List<String>
+        +validate(parameter: String, value: JSON): error
+    }
+    class GateController {
+        +supportedLockStates: List<String>
+        +validate(parameter: String, value: JSON): error
+    }
+    class DeviceModel {
+        +id: String
+        +deviceType: String
+        +protocols: List<Protocol>
+    }
+    class Command <<запрос и данные вызова>> {
+        +deviceId: String
+        +parameter: String
+        +value: JSON
+    }
+    class Protocol {
+        +name: String
+    }
+
+    CommandManager --> DeviceAdapter : send
+    CommandManager --> DeviceProvider : получает устройство
+    CommandManager --> CommandValidator : validate
+    CommandManager ..> Command : передаёт
+    CommandValidator ..> Command : проверяет
+    CommandValidator ..> Device : validate
+    DeviceProvider ..> Device : возвращает
+    Device <|-- Thermostat
+    Device <|-- LightRelay
+    Device <|-- GateController
+    Device "0..*" --> "1" DeviceModel : модель
+    DeviceAdapter ..> Device : ограничение типа T
+    DeviceAdapter ..> Command : отправляет
+    ThermostatAdapter .up.|> DeviceAdapter : T = Thermostat
+    LightRelayAdapter .up.|> DeviceAdapter : T = LightRelay
+    GateControllerAdapter .up.|> DeviceAdapter : T = GateController
+    ThermostatAdapter ..> Thermostat : принимает
+    LightRelayAdapter ..> LightRelay : принимает
+    GateControllerAdapter ..> GateController : принимает
+    DeviceModel "0..*" --> "1..*" Protocol : поддерживает
+
+}
+
+@enduml

@@ -1,0 +1,42 @@
+@startuml Warmhouse_Devices_ER
+title Тёплый дом — ER: БД сервиса устройств
+hide circle
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 65
+
+entity "Протокол\nprotocol" as protocol <<Protocol>> {
+  * name : text <<PK>>
+}
+entity "Модель устройства\ndevice_model" as model <<DeviceModel>> {
+  * id : UUID <<PK>>
+  --
+  * name : text
+  * device_type : text
+}
+entity "Протокол модели\nmodel_protocol" as modelProtocol {
+  * model_id : UUID <<PK, FK>>
+  * protocol_name : text <<PK, FK>>
+}
+entity "Подключённое устройство\ndevice" as device <<Device>> {
+  * id : UUID <<PK>>
+  --
+  * model_id : UUID <<FK>>
+  * owner_id : UUID
+  * location : text
+  * name : text
+  * endpoint : text
+  measurement_unit : text
+  * attributes : jsonb DEFAULT '{}'
+  * created_at : timestamptz
+  * updated_at : timestamptz
+  --
+  CHECK (jsonb_typeof(attributes) = 'object')
+  CHECK (measurement_unit IS NULL OR measurement_unit IN ('Cel', '[degF]', 'K'))
+}
+
+protocol ||--o{ modelProtocol : используется
+model ||--|{ modelProtocol : поддерживает
+model ||--o{ device : описывает
+
+@enduml

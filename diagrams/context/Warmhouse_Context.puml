@@ -1,0 +1,18 @@
+@startuml Warmhouse_Context
+!include <C4/C4_Context>
+
+title Тёплый дом — контекст текущей системы (C4, уровень 1)
+LAYOUT_TOP_DOWN()
+
+Person(resident, "Пользователь")
+Person(technician, "Специалист по подключению")
+
+System(warmhouse, "Монолитное приложение «Тёплый дом»")
+
+System_Ext(sensors, "Датчики температуры")
+
+Rel(resident, warmhouse, "Отопление и температура")
+Rel(technician, warmhouse, "Подключает датчики")
+Rel(warmhouse, sensors, "Получает показания", "Синхронный запрос / ответ")
+
+@enduml

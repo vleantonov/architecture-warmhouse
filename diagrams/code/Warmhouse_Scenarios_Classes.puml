@@ -1,0 +1,63 @@
+@startuml Warmhouse_Scenarios_Classes
+title Тёплый дом — классы: управление сценариями
+
+top to bottom direction
+skinparam classAttributeIconSize 0
+
+package "Управление сценариями" {
+    class ScenarioService {
+        +listScenarios(ownerId: String, name: String [0..1]): (List<Scenario>, error)
+        +getScenarioById(ownerId: String, scenarioId: String): (Scenario, error)
+        +createScenario(ownerId: String, scenario: Scenario): (Scenario, error)
+        +updateScenario(ownerId: String, scenario: Scenario): (Scenario, error)
+        +deleteScenario(ownerId: String, scenarioId: String): error
+    }
+    class ScenarioExecutor {
+        +execute(ownerId: String, scenarioId: String): (List<CommandOutcome>, error)
+    }
+    interface ScenarioRepository {
+        +listScenarios(ownerId: String, name: String [0..1]): (List<Scenario>, error)
+        +findScenarioById(ownerId: String, scenarioId: String): (Scenario, error)
+        +saveScenario(ownerId: String, scenario: Scenario): error
+        +deleteScenario(ownerId: String, scenarioId: String): error
+    }
+    interface CommandClient {
+        +validate(ownerId: String, command: Command): error
+        +send(ownerId: String, command: Command): error
+    }
+    class CommandOutcome <<response>> {
+        +status: String
+        +error: JSON [0..1]
+        +scenarioCommandId: String
+        +deviceId: String
+        +commandIndex: Integer
+    }
+    class Scenario {
+        +owner_id: String
+        +id: String
+        +name: String
+        +commands: List<Command>
+        +validateStructure(): error
+    }
+    class Command <<шаблон команды>> {
+        +id: String
+        +deviceId: String
+        +parameter: String
+        +value: JSON
+        +order: Integer
+    }
+    ScenarioService --> ScenarioRepository : читает и пишет
+    ScenarioService --> CommandClient : validate
+    ScenarioService ..> Scenario : проверяет
+    ScenarioExecutor --> ScenarioRepository : findScenarioById
+    ScenarioExecutor --> CommandClient : send
+    ScenarioExecutor ..> CommandOutcome : возвращает
+    ScenarioExecutor ..> Scenario : выполняет
+    ScenarioExecutor ..> Command : передаёт
+    ScenarioRepository ..> Scenario : хранит
+    Scenario "1" *-- "1..20" Command : commands
+    CommandClient ..> Command : передаёт
+
+}
+
+@enduml

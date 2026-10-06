@@ -1,0 +1,31 @@
+@startuml Warmhouse_Devices_ToBe
+!include <C4/C4_Component>
+LAYOUT_TOP_DOWN()
+skinparam nodesep 35
+skinparam ranksep 45
+title Тёплый дом — компоненты сервиса устройств
+Person(user, "Пользователь")
+Container(web, "Личный кабинет", "Веб-приложение")
+Container(monitoring, "Сервис мониторинга", "Go")
+Container(parameters, "Сервис управления параметрами датчиков", "Go")
+Container_Boundary(service, "Сервис устройств") {
+    Component(api, "HTTP-контроллер устройств", "Компонент")
+    Component(catalog, "Получение каталога и устройств", "Компонент")
+    Component(management, "Управление устройствами и моделями", "Компонент")
+    Component(model, "Модель устройства и правила каталога", "Компонент")
+    Component(repository, "Репозиторий устройств", "Компонент")
+}
+ContainerDb(db, "БД устройств", "PostgreSQL")
+Rel(user, web, "Управляет домом", "HTTPS")
+Rel(web, api, "Устройства и модели", "HTTPS / JSON")
+Rel(monitoring, api, "Получает устройства", "HTTPS / JSON")
+Rel(parameters, api, "Получает Device", "HTTPS / JSON")
+Rel(api, catalog, "Вызывает")
+Rel(api, management, "Вызывает")
+Rel(catalog, repository, "Читает")
+Rel(catalog, model, "Использует")
+Rel(management, model, "Проверяет")
+Rel(management, repository, "Читает и изменяет")
+Rel(repository, db, "Читает и пишет", "SQL")
+
+@enduml

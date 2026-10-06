@@ -1,0 +1,29 @@
+@startuml Warmhouse_Scenarios_ER
+title Тёплый дом — ER: сценарии и команды
+hide circle
+skinparam linetype ortho
+skinparam nodesep 45
+skinparam ranksep 65
+
+entity "Сценарий\nscenario" as scenario <<Scenario>> {
+  * id : UUID <<PK>>
+  --
+  * owner_id : UUID
+  * name : text
+}
+entity "Команда сценария\nscenario_command" as command <<Command>> {
+  * scenario_id : UUID <<PK, FK>>
+  * id : UUID <<PK>>
+  --
+  * device_id : UUID
+  * parameter : text
+  * value : jsonb
+  * command_index : integer
+  --
+  UNIQUE (scenario_id, command_index)
+  CHECK (command_index BETWEEN 0 AND 19)
+}
+
+scenario ||--|{ command : содержит
+
+@enduml

@@ -1,0 +1,620 @@
+openapi: 3.1.0
+info:
+  title: Тёплый дом — сервис устройств
+  version: 1.0.0
+  description: Каталог моделей, регистрация, настройка и удаление устройств.
+servers:
+- url: https://devices.warmhouse.example/api/v1
+paths:
+  /models:
+    get:
+      operationId: list_models
+      summary: Получить каталог моделей
+      responses:
+        '200':
+          description: Каталог моделей.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/model'
+        '400':
+          $ref: '#/components/responses/error_400'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+      description: Возвращает каталог моделей устройств.
+    post:
+      operationId: create_model
+      summary: Создать модель устройства
+      description: Создаёт модель устройства в каталоге.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/create_model'
+      responses:
+        '201':
+          description: Созданная модель.
+          headers:
+            Location:
+              description: Адрес созданной модели.
+              required: true
+              schema:
+                type: string
+                format: uri-reference
+              example: /api/v1/models/00000004-0000-4000-8000-000000000001
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/model'
+        '400':
+          $ref: '#/components/responses/error_400'
+        '422':
+          $ref: '#/components/responses/error_422'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+  /models/{model_id}:
+    delete:
+      operationId: delete_model
+      summary: Удалить модель устройства
+      description: Удаляет модель устройства из каталога.
+      parameters:
+      - name: model_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Модель удалена.
+        '400':
+          $ref: '#/components/responses/error_400'
+        '409':
+          $ref: '#/components/responses/error_409'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+  /devices:
+    get:
+      operationId: list_devices
+      summary: Получить свои устройства
+      responses:
+        '200':
+          description: Список устройств.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/device'
+              example:
+              - owner_id: 00000002-0000-4000-8000-000000000001
+                model_id: 00000004-0000-4000-8000-000000000001
+                name: Термостат гостиной
+                id: 00000003-0000-4000-8000-000000000001
+                location: Living Room
+                created_at: '2026-10-05T09:00:00Z'
+                updated_at: '2026-10-05T09:00:00Z'
+                device_type: THERMOSTAT
+                measurement_unit: Cel
+                endpoint: https://partner.example/devices/123
+                attributes: {}
+                model:
+                  id: 00000004-0000-4000-8000-000000000001
+                  name: Термостат
+                  device_type: THERMOSTAT
+                  protocols:
+                  - name: HTTPS
+        '400':
+          $ref: '#/components/responses/error_400'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+      parameters:
+      - name: model
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: ID модели устройства.
+      - name: location
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+        description: Название локации.
+      - name: name
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+        description: Имя устройства.
+      description: Возвращает устройства пользователя с фильтрами.
+    post:
+      operationId: create_device
+      summary: Зарегистрировать устройство
+      description: Регистрирует устройство пользователя.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/create_device'
+            example:
+              model_id: 00000004-0000-4000-8000-000000000001
+              name: Термостат гостиной
+              location: Living Room
+              endpoint: https://partner.example/devices/123
+              attributes: {}
+      responses:
+        '201':
+          description: Зарегистрированное устройство.
+          headers:
+            Location:
+              description: Адрес устройства.
+              required: true
+              schema:
+                type: string
+                format: uri-reference
+              example: /api/v1/devices/00000003-0000-4000-8000-000000000001
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/device'
+        '400':
+          $ref: '#/components/responses/error_400'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+        '404':
+          $ref: '#/components/responses/error_404'
+        '422':
+          $ref: '#/components/responses/error_422'
+  /devices/{device_id}:
+    get:
+      operationId: get_device_by_id
+      summary: Получить устройство по ID
+      description: Возвращает данные устройства по ID.
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID устройства.
+      responses:
+        '200':
+          description: Данные устройства.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/device'
+        '400':
+          $ref: '#/components/responses/error_400'
+        '404':
+          $ref: '#/components/responses/error_404'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+    patch:
+      operationId: update_device
+      summary: Изменить устройство
+      description: Изменяет имя, локацию, модель, единицу измерения и атрибуты устройства.
+      responses:
+        '200':
+          description: Обновлённое устройство.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/device'
+        '400':
+          $ref: '#/components/responses/error_400'
+        '404':
+          $ref: '#/components/responses/error_404'
+        '422':
+          $ref: '#/components/responses/error_422'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID устройства.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/update_device'
+            examples:
+              model_and_unit:
+                summary: Модель термостата и показания в °F
+                value:
+                  model_id: 00000004-0000-4000-8000-000000000002
+                  measurement_unit: '[degF]'
+              camera_model:
+                summary: Модель камеры и адрес видеопотока
+                value:
+                  model_id: 00000004-0000-4000-8000-000000000003
+                  measurement_unit: null
+                  attributes:
+                    video_endpoint: https://partner.example/cameras/123/video
+    delete:
+      operationId: delete_device
+      summary: Удалить устройство
+      description: Удаляет регистрацию устройства пользователя.
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID устройства.
+      responses:
+        '204':
+          description: Устройство удалено.
+        '400':
+          $ref: '#/components/responses/error_400'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+        '503':
+          $ref: '#/components/responses/error_503'
+components:
+  schemas:
+    error:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        request_id:
+          type: string
+          format: uuid
+        details:
+          type: object
+          additionalProperties: true
+      required:
+      - code
+      - message
+      - request_id
+    model:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+        device_type:
+          type: string
+          enum:
+          - TEMPERATURE_SENSOR
+          - THERMOSTAT
+          - LIGHT_RELAY
+          - GATE_CONTROLLER
+          - CAMERA
+        protocols:
+          type: array
+          items:
+            $ref: '#/components/schemas/protocol'
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+      required:
+      - id
+      - name
+      - device_type
+      - protocols
+      description: Модель устройства с типом и протоколами связи.
+    device:
+      type: object
+      additionalProperties: false
+      properties:
+        owner_id:
+          type: string
+          format: uuid
+          description: ID владельца устройства.
+          readOnly: true
+        id:
+          type: string
+          format: uuid
+          description: Глобальный ID устройства.
+          readOnly: true
+        location:
+          type: string
+          minLength: 1
+          description: Название локации.
+          example: Living Room
+        model_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        device_type:
+          type: string
+          enum:
+          - TEMPERATURE_SENSOR
+          - THERMOSTAT
+          - LIGHT_RELAY
+          - GATE_CONTROLLER
+          - CAMERA
+          readOnly: true
+          description: Тип выбранной модели.
+        measurement_unit:
+          $ref: '#/components/schemas/measurement_unit'
+        endpoint:
+          type: string
+          format: uri
+          description: Адрес устройства.
+        attributes:
+          $ref: '#/components/schemas/device_attributes'
+        model:
+          $ref: '#/components/schemas/model'
+          readOnly: true
+      required:
+      - owner_id
+      - id
+      - location
+      - model_id
+      - name
+      - created_at
+      - updated_at
+      - device_type
+      - measurement_unit
+      - endpoint
+      - model
+      - attributes
+      allOf:
+      - if:
+          properties:
+            device_type:
+              enum:
+              - TEMPERATURE_SENSOR
+              - THERMOSTAT
+          required:
+          - device_type
+        then:
+          properties:
+            measurement_unit:
+              type: string
+              enum:
+              - Cel
+              - '[degF]'
+              - K
+        else:
+          properties:
+            measurement_unit:
+              type: 'null'
+      - if:
+          properties:
+            device_type:
+              const: CAMERA
+          required:
+          - device_type
+        then:
+          properties:
+            attributes:
+              required:
+              - video_endpoint
+      description: Устройство с моделью и настройками.
+    measurement_unit:
+      type:
+      - string
+      - 'null'
+      enum:
+      - Cel
+      - '[degF]'
+      - K
+      - null
+      description: Единица отображения температуры.
+    device_attributes:
+      type: object
+      additionalProperties: true
+      properties:
+        video_endpoint:
+          type: string
+          format: uri
+          description: Адрес видеопотока камеры.
+      description: Дополнительные атрибуты устройства.
+    create_device:
+      type: object
+      additionalProperties: false
+      description: Данные для регистрации устройства.
+      properties:
+        model_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        location:
+          type: string
+          minLength: 1
+          example: Living Room
+        endpoint:
+          type: string
+          format: uri
+          description: Адрес опроса и команд.
+        measurement_unit:
+          $ref: '#/components/schemas/measurement_unit'
+          description: Единица отображения температуры.
+        attributes:
+          $ref: '#/components/schemas/device_attributes'
+          default: {}
+      required:
+      - model_id
+      - name
+      - location
+      - endpoint
+    update_device:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: Изменения настроек устройства.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        location:
+          type: string
+          minLength: 1
+          example: Living Room
+        model_id:
+          type: string
+          format: uuid
+          description: ID выбранной модели устройства.
+        measurement_unit:
+          $ref: '#/components/schemas/measurement_unit'
+          description: Единица отображения температуры.
+        attributes:
+          $ref: '#/components/schemas/device_attributes'
+          description: Атрибуты устройства.
+    protocol:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: HTTPS
+      required:
+      - name
+      description: Протокол модели.
+    create_model:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+        device_type:
+          type: string
+          enum:
+          - TEMPERATURE_SENSOR
+          - THERMOSTAT
+          - LIGHT_RELAY
+          - GATE_CONTROLLER
+          - CAMERA
+        protocols:
+          type: array
+          items:
+            $ref: '#/components/schemas/protocol'
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+      required:
+      - name
+      - device_type
+      - protocols
+      description: Данные для создания модели устройства.
+  responses:
+    error_400:
+      description: Некорректный запрос.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_403:
+      description: Доступ запрещён.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+          example:
+            code: FORBIDDEN
+            message: Недостаточно прав для доступа к ресурсу.
+            request_id: 00000000-0000-4000-8000-000000000001
+    error_404:
+      description: Ресурс не найден.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_422:
+      description: Недопустимые данные.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_502:
+      description: Некорректный ответ устройства.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_503:
+      description: Сервис недоступен.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_504:
+      description: Таймаут устройства.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_409:
+      description: Конфликт состояния модели.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_401:
+      description: Ошибка аутентификации.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          example: Bearer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+  securitySchemes:
+    bearer_auth:
+      type: http
+      scheme: bearer
+      description: Аутентификация пользователя по Bearer-токену.
+security:
+- bearer_auth: []

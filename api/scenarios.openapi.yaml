@@ -1,0 +1,530 @@
+openapi: 3.1.0
+info:
+  title: Тёплый дом — сервис управления сценариями
+  version: 1.0.0
+  description: Управление сценариями устройств.
+servers:
+- url: https://scenarios.warmhouse.example/api/v1
+paths:
+  /scenarios:
+    get:
+      operationId: list_scenarios
+      summary: Получить сценарии
+      responses:
+        '200':
+          description: Список сценариев.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/scenario'
+        '400':
+          $ref: '#/components/responses/error_400'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+      parameters:
+      - name: name
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+        description: Точное название сценария.
+      description: Возвращает сценарии пользователя.
+    post:
+      operationId: create_scenario
+      summary: Создать сценарий
+      responses:
+        '201':
+          description: Сценарий.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/scenario'
+          headers:
+            Location:
+              description: Адрес созданного сценария.
+              schema:
+                type: string
+                format: uri-reference
+              example: /api/v1/scenarios/00000006-0000-4000-8000-000000000001
+        '400':
+          $ref: '#/components/responses/error_400'
+        '404':
+          $ref: '#/components/responses/error_404'
+        '422':
+          $ref: '#/components/responses/error_422'
+        '503':
+          $ref: '#/components/responses/error_503'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+      description: Создаёт сценарий с именем и командами.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  $ref: '#/components/schemas/scenario/properties/name'
+                commands:
+                  $ref: '#/components/schemas/scenario/properties/commands'
+              required:
+              - name
+              - commands
+              description: Имя и команды сценария.
+            example:
+              name: Обогрев гостиной и свет в спальне
+              commands:
+              - id: 00000007-0000-4000-8000-000000000001
+                device_id: 00000003-0000-4000-8000-000000000001
+                parameter: target_temperature
+                value: 22
+              - id: 00000007-0000-4000-8000-000000000002
+                device_id: 00000003-0000-4000-8000-000000000002
+                parameter: power
+                value: 'on'
+  /scenarios/{scenario_id}:
+    get:
+      operationId: get_scenario_by_id
+      summary: Получить сценарий по ID
+      responses:
+        '200':
+          description: Сценарий.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/scenario'
+        '400':
+          $ref: '#/components/responses/error_400'
+        '404':
+          $ref: '#/components/responses/error_404'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+      parameters:
+      - name: scenario_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      description: Возвращает сценарий по ID.
+    put:
+      operationId: update_scenario
+      summary: Заменить имя и команды сценария
+      responses:
+        '200':
+          description: Сценарий.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/scenario'
+        '400':
+          $ref: '#/components/responses/error_400'
+        '404':
+          $ref: '#/components/responses/error_404'
+        '422':
+          $ref: '#/components/responses/error_422'
+        '503':
+          $ref: '#/components/responses/error_503'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+      description: Заменяет имя и команды сценария.
+      parameters:
+      - name: scenario_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  $ref: '#/components/schemas/scenario/properties/name'
+                commands:
+                  $ref: '#/components/schemas/scenario/properties/commands'
+              required:
+              - name
+              - commands
+              description: Имя и команды сценария.
+    delete:
+      operationId: delete_scenario
+      summary: Удалить сценарий
+      description: Удаляет сценарий с командами.
+      parameters:
+      - name: scenario_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Пустой ответ.
+        '400':
+          $ref: '#/components/responses/error_400'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+    post:
+      operationId: execute_scenario
+      summary: Выполнить команды сценария
+      description: Выполняет команды сценария.
+      parameters:
+      - name: scenario_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Результат выполнения сценария.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/execution_response'
+              examples:
+                succeeded:
+                  summary: Успешный запуск
+                  value:
+                    scenario_id: 00000006-0000-4000-8000-000000000001
+                    status: SUCCEEDED
+                    commands:
+                    - scenario_command_id: 00000007-0000-4000-8000-000000000001
+                      device_id: 00000003-0000-4000-8000-000000000001
+                      status: SUCCEEDED
+                      command_index: 0
+                    - scenario_command_id: 00000007-0000-4000-8000-000000000002
+                      device_id: 00000003-0000-4000-8000-000000000002
+                      status: SUCCEEDED
+                      command_index: 1
+                deleted_device:
+                  summary: Запуск с удалённым устройством
+                  value:
+                    scenario_id: 00000006-0000-4000-8000-000000000001
+                    status: FAILED
+                    commands:
+                    - scenario_command_id: 00000007-0000-4000-8000-000000000001
+                      device_id: 00000003-0000-4000-8000-000000000001
+                      status: FAILED
+                      command_index: 0
+                      error:
+                        code: DEVICE_NOT_FOUND
+                        message: Устройство не найдено.
+                        request_id: 00000009-0000-4000-8000-000000000004
+                    - scenario_command_id: 00000007-0000-4000-8000-000000000002
+                      device_id: 00000003-0000-4000-8000-000000000002
+                      status: NOT_SENT
+                      command_index: 1
+        '400':
+          $ref: '#/components/responses/error_400'
+        '404':
+          $ref: '#/components/responses/error_404'
+        '503':
+          $ref: '#/components/responses/error_503'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+
+components:
+  schemas:
+    error:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        request_id:
+          type: string
+          format: uuid
+        details:
+          type: object
+          additionalProperties: true
+      required:
+      - code
+      - message
+      - request_id
+    scenario:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/command'
+          minItems: 1
+          maxItems: 20
+        owner_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: ID владельца сценария.
+      required:
+      - id
+      - name
+      - commands
+      - owner_id
+      description: Сценарий управления устройствами.
+    execution_response:
+      type: object
+      additionalProperties: false
+      properties:
+        scenario_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - SUCCEEDED
+          - PARTIAL
+          - FAILED
+        error:
+          $ref: '#/components/schemas/error'
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/command_outcome'
+          minItems: 1
+          maxItems: 20
+      required:
+      - scenario_id
+      - status
+      - commands
+      oneOf:
+      - properties:
+          status:
+            const: SUCCEEDED
+          commands:
+            items:
+              properties:
+                status:
+                  const: SUCCEEDED
+        not:
+          required:
+          - error
+      - properties:
+          status:
+            const: PARTIAL
+          commands:
+            allOf:
+            - contains:
+                properties:
+                  status:
+                    const: SUCCEEDED
+            - contains:
+                properties:
+                  status:
+                    const: FAILED
+              maxContains: 1
+      - properties:
+          status:
+            const: FAILED
+          commands:
+            items:
+              properties:
+                status:
+                  enum:
+                  - FAILED
+                  - NOT_SENT
+            contains:
+              properties:
+                status:
+                  const: FAILED
+            maxContains: 1
+      description: Результат выполнения сценария.
+    command:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        parameter:
+          type: string
+          enum:
+          - target_temperature
+          - power
+          - lock_state
+          description: Управляемый параметр устройства.
+        value:
+          oneOf:
+          - type: number
+          - type: string
+            enum:
+            - 'on'
+            - 'off'
+            - locked
+            - unlocked
+          description: Значение параметра.
+      required:
+      - id
+      - device_id
+      - parameter
+      - value
+      oneOf:
+      - properties:
+          parameter:
+            const: target_temperature
+          value:
+            type: number
+            description: Целевая температура в Cel (°C).
+      - properties:
+          parameter:
+            const: power
+          value:
+            type: string
+            enum:
+            - 'on'
+            - 'off'
+      - properties:
+          parameter:
+            const: lock_state
+          value:
+            type: string
+            enum:
+            - locked
+            - unlocked
+      description: Команда сценария для устройства.
+    command_outcome:
+      type: object
+      additionalProperties: false
+      properties:
+        scenario_command_id:
+          type: string
+          format: uuid
+          description: ID команды сценария.
+        device_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - SUCCEEDED
+          - FAILED
+          - NOT_SENT
+        error:
+          $ref: '#/components/schemas/error'
+        command_index:
+          type: integer
+          minimum: 0
+          maximum: 19
+          description: Индекс в commands с нуля.
+      required:
+      - scenario_command_id
+      - command_index
+      - device_id
+      - status
+      description: Результат выполнения команды.
+      allOf:
+      - if:
+          properties:
+            status:
+              const: FAILED
+          required:
+          - status
+        then:
+          required:
+          - error
+        else:
+          not:
+            required:
+            - error
+  responses:
+    error_400:
+      description: Некорректный запрос.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_403:
+      description: Доступ запрещён.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+          example:
+            code: FORBIDDEN
+            message: Недостаточно прав для доступа к ресурсу.
+            request_id: 00000000-0000-4000-8000-000000000001
+    error_404:
+      description: Сценарий или устройство не найдены.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_422:
+      description: Недопустимая структура сценария или команда.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_502:
+      description: Некорректный ответ устройства.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_503:
+      description: Зависимый сервис недоступен.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_504:
+      description: Таймаут устройства.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_401:
+      description: Ошибка аутентификации.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          example: Bearer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+  securitySchemes:
+    bearer_auth:
+      type: http
+      scheme: bearer
+      description: Аутентификация по Bearer-токену.
+security:
+- bearer_auth: []
