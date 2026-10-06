@@ -1,0 +1,22 @@
+@startuml Warmhouse_Monitoring_ER
+title Тёплый дом — ER: последние показания
+hide circle
+skinparam linetype ortho
+
+entity "Последнее показание\nlatest_reading" as reading <<Reading>> {
+  * device_id : UUID <<PK>>
+  * name : text <<PK>>
+  --
+  * value : jsonb
+  * status : text
+  unit : text
+  source_time : timestamptz
+  * last_updated : timestamptz
+  --
+  CHECK (value <> 'null'::jsonb)
+  CHECK (length(status) > 0)
+  CHECK ((name IN ('temperature', 'target_temperature') AND unit IS NOT NULL AND unit = 'Cel')
+    OR (name NOT IN ('temperature', 'target_temperature') AND unit IS NULL))
+}
+
+@enduml

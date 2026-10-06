@@ -1,60 +1,68 @@
-# Smart Home Sensor Management API
+# Smart Home — локальный запуск
 
-## Prerequisites
+Нужны Docker и Docker Compose. Команды выполняются из каталога `apps`.
+Если Compose установлен как плагин, используйте `docker compose` вместо `docker-compose`.
 
-- Docker and Docker Compose
-
-## Getting Started
-
-### Option 1: Using Docker Compose (Recommended)
-
-The easiest way to start the application is to use Docker Compose:
-
-```bash
-./init.sh
+```sh
+docker-compose up --build -d --wait
 ```
 
-This script will:
+Либо `./init.sh`. Запускаются три контейнера:
 
-1. Build and start the PostgreSQL and application containers
-2. Wait for the services to be ready
-3. Display information about how to access the API
+- `app` — исходный Go-монолит, http://localhost:8080;
+- `temperature-api` — генератор температуры, http://localhost:8081;
+- `postgres` — PostgreSQL 16 с постоянным томом `postgres_data`.
 
-Alternatively, you can run Docker Compose directly:
+PostgreSQL запускает `smart_home/init.sql` при первой инициализации пустого тома.
+Скрипт сам создаёт базу `smarthome`, поэтому `POSTGRES_DB=smarthome` не задаётся.
+Монолит дожидается готовности базы и сервиса температуры.
 
-```bash
-docker-compose up -d
+## Проверка
+
+```sh
+curl 'http://localhost:8081/temperature?location=Living%20Room'
+curl 'http://localhost:8081/temperature?location=Living%20Room'
+curl 'http://localhost:8081/temperature?sensor_id=1'
+curl http://localhost:8081/temperature/1
+curl http://localhost:8080/health
+
+curl -X POST http://localhost:8080/api/v1/sensors \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Living Room Temperature","type":"temperature","location":"Living Room","unit":"°C"}'
+
+curl http://localhost:8080/api/v1/sensors
+curl http://localhost:8080/api/v1/sensors
 ```
 
-The API will be available at http://localhost:8080
+Новые случайные показания доступны через `GET /temperature?location=...`
+и `GET /temperature/{sensor_id}` на порту 8081.
+В Postman можно проверить `Create Sensor` и повторить `Get All Sensors` монолита.
+Его код не изменён: при чтении датчиков он обращается к `/temperature/{id}`
+и получает новые показания со статусом `active`.
 
-### Option 2: Manual setup
+Температура генерируется в диапазоне 15–30 °C. ID `1`, `2`, `3` соответствуют
+`Living Room`, `Bedroom`, `Kitchen` в ответе сервиса. Query-параметры `location`
+и `sensor_id` необязательны: отсутствующая локация определяется по ID,
+отсутствующий ID — по локации. Для неизвестного ID локация — `Unknown`,
+для неизвестной локации ID — `0`. Без обоих параметров возвращаются `Unknown`
+и `0`; если переданы оба, их значения сохраняются.
+В маршруте `/temperature/{sensor_id}` ID из пути имеет приоритет над query-параметром.
 
-If you prefer to run the application without Docker:
+Сервис температуры — один Go-файл без сторонних библиотек. Для отдельного запуска
+нужен Go 1.22 или новее:
 
-1. Start the PostgreSQL database:
-
-```bash
-docker-compose up -d postgres
+```sh
+cd temperature-api
+go run .
 ```
 
-2. Build and run the application:
+Порт — 8081.
 
-```bash
-go build -o smarthome
-./smarthome
+## Остановка
+
+```sh
+docker-compose logs -f
+docker-compose down
 ```
 
-## API Testing
-
-A Postman collection is provided for testing the API. Import the `smarthome-api.postman_collection.json` file into Postman to get started.
-
-## API Endpoints
-
-- `GET /health` - Health check
-- `GET /api/v1/sensors` - Get all sensors
-- `GET /api/v1/sensors/:id` - Get a specific sensor
-- `POST /api/v1/sensors` - Create a new sensor
-- `PUT /api/v1/sensors/:id` - Update a sensor
-- `DELETE /api/v1/sensors/:id` - Delete a sensor
-- `PATCH /api/v1/sensors/:id/value` - Update a sensor's value and status
+Данные PostgreSQL сохраняются в томе после остановки.

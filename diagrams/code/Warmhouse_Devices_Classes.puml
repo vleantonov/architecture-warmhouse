@@ -1,0 +1,108 @@
+@startuml Warmhouse_Devices_Classes
+title Тёплый дом — классы: управление устройствами
+
+top to bottom direction
+skinparam classAttributeIconSize 0
+
+package "Управление устройствами" {
+    class DeviceService {
+        +listDevices(ownerId: String, model: String [0..1], location: String [0..1], name: String [0..1]): (List<Device>, error)
+        +getDeviceById(ownerId: String, deviceId: String): (Device, error)
+        +createDevice(ownerId: String, request: CreateDevice): (Device, error)
+        +updateDevice(ownerId: String, deviceId: String, request: UpdateDevice): (Device, error)
+        +deleteDevice(ownerId: String, deviceId: String): error
+        +listModels(): (List<DeviceModel>, error)
+        +createModel(request: CreateModel): (DeviceModel, error)
+        +deleteModel(modelId: String): error
+    }
+    class CreateModel <<request>> {
+        +name: String
+        +deviceType: String
+        +protocols: List<Protocol>
+    }
+    class CreateDevice <<request>> {
+        +modelId: String
+        +name: String
+        +location: String
+        +endpoint: String
+        +measurementUnit: String [0..1]
+        +attributes: JSON = {}
+    }
+    class UpdateDevice <<request>> {
+        +name: String [0..1]
+        +location: String [0..1]
+        +modelId: String [0..1]
+        +measurementUnit: String [0..1]
+        +attributes: JSON [0..1]
+    }
+    interface DeviceRepository {
+        +listDevices(ownerId: String, model: String [0..1], location: String [0..1], name: String [0..1]): (List<Device>, error)
+        +findDeviceById(deviceId: String): (Device, error)
+        +insertDevice(ownerId: String, device: Device): error
+        +saveDevice(ownerId: String, device: Device): error
+        +deleteDevice(ownerId: String, deviceId: String): error
+        +findModel(modelId: String): (DeviceModel, error)
+        +listModels(): (List<DeviceModel>, error)
+        +saveModel(model: DeviceModel): error
+        +deleteModel(modelId: String): error
+    }
+    abstract class Device {
+        +id: String
+        +owner_id: String
+        +location: String
+        +name: String
+        +/deviceType: String
+        +measurementUnit: String [0..1]
+        +endpoint: String
+        +attributes: JSON
+        +model: DeviceModel
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+    class TemperatureSensor {
+        +measurementSchema: JSON
+    }
+    class Thermostat {
+        +canonicalUnit: String = Cel
+        +minTargetTemperatureCel: Decimal
+        +maxTargetTemperatureCel: Decimal
+    }
+    class LightRelay {
+        +supportedPowerStates: List<String>
+    }
+    class GateController {
+        +supportedLockStates: List<String>
+    }
+    class Camera {
+        +/videoAddress: String
+    }
+    class DeviceModel {
+        +id: String
+        +name: String
+        +deviceType: String
+        +protocols: List<Protocol>
+    }
+
+    class Protocol {
+        +name: String
+    }
+
+    DeviceService --> DeviceRepository : читает и пишет
+    DeviceService ..> CreateModel : принимает
+    DeviceService ..> CreateDevice : проверяет
+    DeviceService ..> UpdateDevice : проверяет
+    DeviceService ..> Device : управляет
+    DeviceService ..> DeviceModel : управляет
+    DeviceRepository ..> Device : хранит
+    DeviceRepository ..> DeviceModel : хранит каталог
+    Device <|-- TemperatureSensor
+    Device <|-- Thermostat
+    Device <|-- LightRelay
+    Device <|-- GateController
+    Device <|-- Camera
+    Device "0..*" --> "1" DeviceModel : модель
+    DeviceModel "0..*" --> "1..*" Protocol : поддерживает
+
+}
+
+@enduml

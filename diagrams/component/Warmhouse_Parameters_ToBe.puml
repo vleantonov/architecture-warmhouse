@@ -1,0 +1,43 @@
+@startuml Warmhouse_Parameters_ToBe
+!include <C4/C4_Component>
+LAYOUT_TOP_DOWN()
+skinparam nodesep 35
+skinparam ranksep 45
+title Тёплый дом — компоненты сервиса управления параметрами
+Person(user, "Пользователь")
+Container(web, "Личный кабинет", "Веб-приложение")
+Container(scenarios, "Сервис управления сценариями", "Go")
+Container(devices, "Сервис устройств", "Go")
+Container_Boundary(service, "Сервис управления параметрами датчиков") {
+    Component(api, "HTTP-контроллер команд", "Компонент")
+    Component(manager, "Менеджер команд", "CommandManager")
+    Component(validator, "Валидатор команд", "CommandValidator")
+    Component(deviceModel, "Модель устройства", "Device и наследники")
+    Component(model, "Данные команды", "Command")
+    Component(client, "Клиент сервиса устройств", "DeviceProvider")
+    Component(heating, "ThermostatAdapter", "DeviceAdapter<Thermostat>")
+    Component(light, "LightRelayAdapter", "DeviceAdapter<LightRelay>")
+    Component(gates, "GateControllerAdapter", "DeviceAdapter<GateController>")
+}
+System_Ext(thermostat, "Термостат партнёра")
+System_Ext(relay, "Реле освещения партнёра")
+System_Ext(gate, "Контроллер ворот партнёра")
+Rel(user, web, "Управляет домом", "HTTPS")
+Rel(web, api, "Отправляет команду", "HTTPS / JSON")
+Rel(scenarios, api, "Проверяет и отправляет", "HTTPS / JSON")
+Rel(api, manager, "validate / execute")
+Rel(manager, validator, "validate")
+Rel(validator, deviceModel, "validate(parameter, value)")
+Rel(client, deviceModel, "Создаёт конкретный тип")
+Rel(manager, model, "Использует Command")
+Rel(api, model, "Принимает Command")
+Rel(manager, client, "Получает Device")
+Rel(manager, heating, "send(Thermostat, Command)")
+Rel(manager, light, "send(LightRelay, Command)")
+Rel(manager, gates, "send(GateController, Command)")
+Rel(client, devices, "Получает Device", "HTTPS / JSON")
+Rel(heating, thermostat, "Команда и ответ", "Синхронно, HTTPS / JSON")
+Rel(light, relay, "Команда и ответ", "Синхронно, HTTPS / JSON")
+Rel(gates, gate, "Команда и ответ", "Синхронно, HTTPS / JSON")
+
+@enduml

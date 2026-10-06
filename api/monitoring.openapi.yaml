@@ -1,0 +1,619 @@
+openapi: 3.1.0
+info:
+  title: Тёплый дом — сервис мониторинга
+  version: 1.0.0
+  description: Показания устройств и видеопотоки камер.
+servers:
+- url: https://monitoring.warmhouse.example/api/v1
+paths:
+  /observations:
+    get:
+      operationId: get_readings
+      summary: Получить показания с фильтрами
+      responses:
+        '200':
+          description: Список показаний устройств.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/reading'
+              examples:
+                all_devices:
+                  summary: Показания устройств
+                  value:
+                  - device_id: 00000003-0000-4000-8000-000000000001
+                    name: temperature
+                    value: 21.5
+                    unit: Cel
+                    status: active
+                    last_updated: '2026-10-06T09:00:01Z'
+                    source_time: '2026-10-06T09:00:00Z'
+                    stale: false
+                  - device_id: 00000003-0000-4000-8000-000000000001
+                    name: target_temperature
+                    value: 22
+                    unit: Cel
+                    status: active
+                    last_updated: '2026-10-06T09:00:01Z'
+                    stale: false
+                  - device_id: 00000003-0000-4000-8000-000000000002
+                    name: power
+                    value: 'on'
+                    status: unknown
+                    last_updated: '2026-10-06T09:00:01Z'
+                    stale: false
+                saved_after_failure:
+                  summary: Сохранённое показание
+                  value:
+                  - device_id: 00000003-0000-4000-8000-000000000001
+                    name: temperature
+                    value: 21.5
+                    unit: Cel
+                    status: active
+                    last_updated: '2026-10-05T09:00:01Z'
+                    source_time: '2026-10-05T09:00:00Z'
+                    stale: true
+                no_snapshot:
+                  summary: Показание без значения
+                  value:
+                  - device_id: 00000003-0000-4000-8000-000000000001
+                    name: temperature
+                    value: null
+                    unit: Cel
+                    status: null
+                    last_updated: null
+                    stale: true
+                partial_thermostat_readings:
+                  summary: Показания термостата
+                  value:
+                  - device_id: 00000003-0000-4000-8000-000000000001
+                    name: temperature
+                    value: 21.5
+                    unit: Cel
+                    status: active
+                    last_updated: '2026-10-05T09:00:01Z'
+                    source_time: '2026-10-05T09:00:00Z'
+                    stale: true
+                  - device_id: 00000003-0000-4000-8000-000000000001
+                    name: target_temperature
+                    value: 22
+                    unit: Cel
+                    status: active
+                    last_updated: '2026-10-06T09:00:01Z'
+                    stale: false
+                fahrenheit:
+                  summary: Температура в °F
+                  value:
+                  - device_id: 00000003-0000-4000-8000-000000000001
+                    name: temperature
+                    value: 70.7
+                    unit: '[degF]'
+                    status: active
+                    last_updated: '2026-10-05T09:00:01Z'
+                    stale: true
+                  - device_id: 00000003-0000-4000-8000-000000000001
+                    name: target_temperature
+                    value: 71.6
+                    unit: '[degF]'
+                    status: active
+                    last_updated: '2026-10-06T09:00:01Z'
+                    stale: false
+                kelvin:
+                  summary: Температура в K
+                  value:
+                  - device_id: 00000003-0000-4000-8000-000000000003
+                    name: temperature
+                    value: 293.15
+                    unit: K
+                    status: active
+                    last_updated: '2026-10-06T09:00:01Z'
+                    stale: false
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Управление HTTP-кэшированием.
+        '400':
+          $ref: '#/components/responses/error_400'
+        '503':
+          $ref: '#/components/responses/error_503'
+        '422':
+          $ref: '#/components/responses/error_422'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+        '404':
+          $ref: '#/components/responses/error_404'
+      description: Получает показания устройств по заданным фильтрам.
+      parameters:
+      - name: device_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: ID устройства.
+      - name: location
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+        description: Точное название локации.
+        example: Living Room
+      - name: device_type
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - TEMPERATURE_SENSOR
+          - THERMOSTAT
+          - LIGHT_RELAY
+          - GATE_CONTROLLER
+          - CAMERA
+        description: Тип устройства.
+        example: THERMOSTAT
+      - name: parameter
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - temperature
+          - target_temperature
+          - power
+          - lock_state
+          - available
+        description: Название параметра устройства.
+        example: target_temperature
+  /observations/{device_id}:
+    patch:
+      operationId: update_reading
+      summary: Записать показание и статус
+      description: Записывает значение параметра устройства, статус и время источника.
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID устройства пользователя.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/update_reading'
+            examples:
+              explicit_zero:
+                summary: Запись 0 °C
+                value:
+                  name: temperature
+                  value: 0
+                  unit: Cel
+                  status: active
+                  source_time: '2026-10-06T09:00:00Z'
+              fahrenheit_input:
+                summary: Запись 68 °F
+                value:
+                  name: temperature
+                  value: 68
+                  unit: '[degF]'
+                  status: manually_recorded
+              kelvin_input:
+                summary: Запись 293.15 K
+                value:
+                  name: temperature
+                  value: 293.15
+                  unit: K
+                  status: active
+              relay_state:
+                summary: Запись состояния реле
+                value:
+                  name: power
+                  value: 'off'
+                  status: inactive
+      responses:
+        '200':
+          description: Записанное показание.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Управление HTTP-кэшированием.
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/reading'
+                - properties:
+                    value:
+                      not:
+                        type: 'null'
+                    stale:
+                      const: false
+              examples:
+                explicit_zero:
+                  summary: Записанные 0 °C
+                  value:
+                    device_id: 00000003-0000-4000-8000-000000000001
+                    name: temperature
+                    value: 0
+                    unit: Cel
+                    status: active
+                    last_updated: '2026-10-06T09:00:01Z'
+                    source_time: '2026-10-06T09:00:00Z'
+                    stale: false
+                display_fahrenheit:
+                  summary: Показание 68 °F
+                  value:
+                    device_id: 00000003-0000-4000-8000-000000000001
+                    name: temperature
+                    value: 68
+                    unit: '[degF]'
+                    status: active
+                    last_updated: '2026-10-06T09:00:01Z'
+                    stale: false
+        '400':
+          $ref: '#/components/responses/error_400'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+        '404':
+          $ref: '#/components/responses/error_404'
+        '422':
+          $ref: '#/components/responses/error_422'
+        '503':
+          $ref: '#/components/responses/error_503'
+  /video:
+    get:
+      operationId: get_camera_stream
+      summary: Получить видеопоток камеры
+      responses:
+        '200':
+          description: Видеопоток камеры.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Управление HTTP-кэшированием.
+        '400':
+          $ref: '#/components/responses/error_400'
+        '404':
+          $ref: '#/components/responses/error_404'
+        '422':
+          $ref: '#/components/responses/error_422'
+        '502':
+          $ref: '#/components/responses/error_502'
+        '503':
+          $ref: '#/components/responses/error_503'
+        '504':
+          $ref: '#/components/responses/error_504'
+        '401':
+          $ref: '#/components/responses/error_401'
+        '403':
+          $ref: '#/components/responses/error_403'
+      description: Предоставляет видеопоток камеры.
+      parameters:
+      - name: device_id
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID камеры.
+      - name: location
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+        description: Точное название локации.
+        example: Living Room
+components:
+  schemas:
+    error:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        request_id:
+          type: string
+          format: uuid
+        details:
+          type: object
+          additionalProperties: true
+      required:
+      - code
+      - message
+      - request_id
+    reading:
+      type: object
+      additionalProperties: false
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Название параметра устройства.
+          enum:
+          - temperature
+          - target_temperature
+          - power
+          - lock_state
+          - available
+        value:
+          type:
+          - number
+          - string
+          - boolean
+          - 'null'
+          description: Значение параметра устройства.
+        status:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+          description: Статус показания.
+        last_updated:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Серверное время записи показания.
+        stale:
+          type: boolean
+          description: Признак неактуального или недоступного показания.
+        unit:
+          type: string
+          enum:
+          - Cel
+          - '[degF]'
+          - K
+          description: Единица измерения температуры в ответе.
+        source_time:
+          type: string
+          format: date-time
+          description: Время показания по данным источника.
+      required:
+      - device_id
+      - name
+      - value
+      - status
+      - last_updated
+      - stale
+      oneOf:
+      - properties:
+          name:
+            enum:
+            - temperature
+            - target_temperature
+          value:
+            type:
+            - number
+            - 'null'
+      - properties:
+          name:
+            const: power
+          value:
+            enum:
+            - 'on'
+            - 'off'
+            - null
+      - properties:
+          name:
+            const: lock_state
+          value:
+            enum:
+            - locked
+            - unlocked
+            - null
+      - properties:
+          name:
+            const: available
+          value:
+            type:
+            - boolean
+            - 'null'
+      allOf:
+      - if:
+          properties:
+            value:
+              type: 'null'
+        then:
+          properties:
+            status:
+              type: 'null'
+            last_updated:
+              type: 'null'
+            stale:
+              const: true
+          not:
+            required:
+            - source_time
+        else:
+          properties:
+            status:
+              type: string
+              minLength: 1
+            last_updated:
+              type: string
+              format: date-time
+      - if:
+          properties:
+            name:
+              enum:
+              - temperature
+              - target_temperature
+            value:
+              type: number
+        then:
+          required:
+          - unit
+      - if:
+          properties:
+            name:
+              enum:
+              - power
+              - lock_state
+              - available
+        then:
+          not:
+            required:
+            - unit
+      description: Показание параметра устройства со статусом и временем.
+    update_reading:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/reading/properties/name'
+        value:
+          type:
+          - number
+          - string
+          - boolean
+          description: Значение параметра для записи.
+        status:
+          type: string
+          minLength: 1
+          description: Статус показания.
+        unit:
+          type: string
+          enum:
+          - Cel
+          - '[degF]'
+          - K
+          description: Единица измерения переданной температуры.
+        source_time:
+          type: string
+          format: date-time
+          description: Время показания по данным источника.
+      required:
+      - name
+      - value
+      - status
+      oneOf:
+      - properties:
+          name:
+            enum:
+            - temperature
+            - target_temperature
+          value:
+            type: number
+        required:
+        - unit
+      - properties:
+          name:
+            const: power
+          value:
+            enum:
+            - 'on'
+            - 'off'
+        not:
+          required:
+          - unit
+      - properties:
+          name:
+            const: lock_state
+          value:
+            enum:
+            - locked
+            - unlocked
+        not:
+          required:
+          - unit
+      - properties:
+          name:
+            const: available
+          value:
+            type: boolean
+        not:
+          required:
+          - unit
+      description: Данные для записи показания устройства.
+  responses:
+    error_400:
+      description: Некорректный запрос.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_403:
+      description: Доступ запрещён.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+          example:
+            code: FORBIDDEN
+            message: Недостаточно прав для доступа к ресурсу.
+            request_id: 00000000-0000-4000-8000-000000000001
+    error_404:
+      description: Ресурс не найден.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_422:
+      description: Недопустимые данные запроса.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_502:
+      description: Некорректный ответ устройства.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_503:
+      description: Сервис недоступен.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_504:
+      description: Истёк срок ожидания устройства.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    error_401:
+      description: Требуется аутентификация.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          example: Bearer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+  securitySchemes:
+    bearer_auth:
+      type: http
+      scheme: bearer
+      description: Аутентификация по Bearer-токену.
+security:
+- bearer_auth: []

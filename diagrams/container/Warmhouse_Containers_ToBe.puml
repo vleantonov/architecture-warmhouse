@@ -1,0 +1,54 @@
+@startuml Warmhouse_Containers_ToBe
+!include <C4/C4_Container>
+title Тёплый дом — C4 Containers
+LAYOUT_TOP_DOWN()
+skinparam nodesep 70
+skinparam ranksep 95
+
+Person(user, "Пользователь")
+
+System_Boundary(platform, "Тёплый дом — SaaS") {
+    Container(web, "Пользовательское приложение — фронтенд", "Веб-приложение / SPA")
+    together {
+        Container(monitoring, "Сервис мониторинга", "Go")
+        ContainerDb(monitoringDb, "БД последних показаний", "PostgreSQL")
+    }
+    together {
+        Container(devices, "Сервис устройств", "Go")
+        ContainerDb(devicesDb, "БД устройств", "PostgreSQL")
+    }
+    Container(parameters, "Сервис управления параметрами датчиков", "Go")
+    together {
+        Container(scenarios, "Сервис управления сценариями", "Go")
+        ContainerDb(scenariosDb, "БД сценариев", "PostgreSQL")
+    }
+}
+
+System_Ext(sensors, "Внешние модули в домах пользователей")
+System_Ext(users, "Внешняя система авторизации")
+
+Lay_R(monitoring, parameters)
+Lay_D(monitoring, monitoringDb)
+Lay_R(parameters, scenarios)
+Lay_D(parameters, devices)
+Lay_D(devices, devicesDb)
+Lay_D(devicesDb, sensors)
+
+Rel(user, web, "Управляет домом", "HTTPS")
+Rel(web, users, "Получает токен", "HTTPS / JSON")
+Rel(web, devices, "Устройства и модели", "HTTPS / JSON")
+Rel(web, monitoring, "Показания и видео", "HTTPS / JSON; видеопоток")
+Rel(web, parameters, "Команды", "HTTPS / JSON")
+Rel(web, scenarios, "Сценарии", "HTTPS / JSON")
+
+Rel_D(monitoring, devices, "Получает устройства", "HTTPS / JSON")
+Rel_D(parameters, devices, "Device для команд", "HTTPS / JSON")
+Rel_L(scenarios, parameters, "Проверка и отправка команд", "HTTPS / JSON")
+Rel(monitoring, sensors, "Опрос и видео", "HTTPS / JSON; видеопоток")
+Rel(parameters, sensors, "Синхронная команда и ответ", "HTTPS / JSON")
+
+Rel_D(devices, devicesDb, "Читает и пишет", "SQL")
+Rel_D(monitoring, monitoringDb, "Читает и сохраняет", "SQL")
+Rel_D(scenarios, scenariosDb, "Читает и пишет", "SQL")
+
+@enduml

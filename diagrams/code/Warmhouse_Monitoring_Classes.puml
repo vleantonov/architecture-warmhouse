@@ -1,0 +1,108 @@
+@startuml Warmhouse_Monitoring_Classes
+title Тёплый дом — классы: мониторинг устройств
+
+top to bottom direction
+skinparam classAttributeIconSize 0
+skinparam nodesep 20
+skinparam ranksep 35
+
+package "Мониторинг устройств" {
+    class MonitoringService {
+        -readingAdapters: Map<String, ReadingAdapter>
+        +getReadings(ownerId: String, location: String [0..1], deviceType: String [0..1], parameter: String [0..1]): (List<Reading>, error)
+        +getReadingsById(ownerId: String, deviceId: String, parameter: String [0..1]): (List<Reading>, error)
+        +updateReading(ownerId: String, deviceId: String, reading: Reading): (Reading, error)
+        +openVideo(ownerId: String, location: String [0..1], deviceId: String): (VideoStream, error)
+    }
+    interface DeviceProvider {
+        +listDevices(ownerId: String, model: String [0..1], location: String [0..1], name: String [0..1]): (List<Device>, error)
+        +getDeviceById(ownerId: String, deviceId: String): (Device, error)
+    }
+    interface ReadingAdapter {
+        +read(device: Device, parameter: String [0..1]): (List<Reading>, error)
+    }
+    interface ReadingRepository {
+        +findLatest(deviceId: String, name: String): (Reading [0..1], error)
+        +saveLatest(reading: Reading): (Reading, error)
+    }
+    class UnitConverter {
+        +toCel(value: Decimal, sourceUnit: String): Decimal
+        +fromCel(value: Decimal, targetUnit: String): Decimal
+    }
+    interface VideoAdapter {
+        +openStream(device: Device): (VideoStream, error)
+    }
+    class TemperatureSensorAdapter <<TEMPERATURE_SENSOR>>
+    class ThermostatReadingAdapter <<THERMOSTAT>>
+    class LightRelayReadingAdapter <<LIGHT_RELAY>>
+    class GateControllerReadingAdapter <<GATE_CONTROLLER>>
+    class CameraReadingAdapter <<CAMERA>>
+    class CameraVideoAdapter <<камеры>> {
+        +openStream(device: Device): (VideoStream, error)
+    }
+    class VideoStream {
+        +deviceId: String
+        +contentType: String
+        +read(maxBytes: Integer): (Byte[], error)
+        +close(): error
+    }
+    abstract class Device {
+        +id: String
+        +owner_id: String
+        +location: String
+        +/deviceType: String
+        +measurementUnit: String [0..1]
+        +endpoint: String
+        +attributes: JSON
+        +model: DeviceModel
+    }
+    class DeviceModel {
+        +id: String
+        +deviceType: String
+        +protocols: List<Protocol>
+    }
+    class Reading {
+        +deviceId: String
+        +name: String
+        +value: JSON | null
+        +unit: String [0..1]
+        +sourceTime: DateTime [0..1]
+        +status: String | null
+        +lastUpdated: DateTime | null
+        +stale: Boolean
+    }
+
+    class Protocol {
+        +name: String
+    }
+
+    MonitoringService --> DeviceProvider : получает устройства
+    MonitoringService --> ReadingRepository : читает и пишет
+    MonitoringService "1" --> "1..*" ReadingAdapter : выбирает адаптер
+    MonitoringService --> UnitConverter : преобразует единицы
+    MonitoringService --> VideoAdapter : выбирает адаптер
+    TemperatureSensorAdapter .up.|> ReadingAdapter
+    ThermostatReadingAdapter .up.|> ReadingAdapter
+    LightRelayReadingAdapter .up.|> ReadingAdapter
+    GateControllerReadingAdapter .up.|> ReadingAdapter
+    CameraReadingAdapter .up.|> ReadingAdapter
+    CameraVideoAdapter .up.|> VideoAdapter
+    MonitoringService ..> VideoStream : возвращает
+    DeviceProvider ..> Device : устройства
+    ReadingAdapter ..> Reading : возвращает
+    ReadingRepository ..> Reading : хранит
+    VideoAdapter ..> VideoStream : открывает
+    MonitoringService ..> Reading : принимает и возвращает
+    Reading --> Device : deviceId
+    Device "0..*" --> "1" DeviceModel : модель
+    ReadingAdapter ..> Device : использует
+    VideoAdapter ..> Device : использует
+    DeviceModel "0..*" --> "1..*" Protocol : поддерживает
+
+    DeviceProvider -[hidden]down-> ReadingAdapter
+    ReadingAdapter -[hidden]down-> ReadingRepository
+    ReadingRepository -[hidden]down-> VideoAdapter
+
+}
+
+@enduml

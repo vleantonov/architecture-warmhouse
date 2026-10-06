@@ -1,0 +1,32 @@
+@startuml Warmhouse_Scenarios_ToBe
+!include <C4/C4_Component>
+LAYOUT_TOP_DOWN()
+skinparam nodesep 35
+skinparam ranksep 45
+title Тёплый дом — компоненты сервиса управления сценариями
+Person(user, "Пользователь")
+Container(web, "Личный кабинет", "Веб-приложение")
+Container(parameters, "Сервис управления параметрами датчиков", "Go")
+Container_Boundary(service, "Сервис управления сценариями") {
+    Component(api, "HTTP-контроллер сценариев", "Компонент")
+    Component(editor, "Управление сценариями", "Компонент")
+    Component(executor, "Исполнитель сценария", "Компонент")
+    Component(model, "Модель сценария", "Компонент")
+    Component(repository, "Репозиторий сценариев", "Компонент")
+    Component(sender, "Клиент сервиса параметров", "CommandClient")
+}
+ContainerDb(db, "БД сценариев", "PostgreSQL")
+Rel(user, web, "Управляет домом", "HTTPS")
+Rel(web, api, "Настраивает и запускает", "HTTPS / JSON")
+Rel(api, editor, "Вызывает")
+Rel(api, executor, "Вызывает выполнение")
+Rel(editor, model, "Проверяет структуру")
+Rel(executor, model, "Читает команды")
+Rel(editor, repository, "Читает и изменяет")
+Rel(executor, repository, "Читает")
+Rel(editor, sender, "validate")
+Rel(executor, sender, "send")
+Rel(repository, db, "Читает и пишет", "SQL")
+Rel(sender, parameters, "Проверяет или отправляет команды", "HTTPS / JSON")
+
+@enduml
